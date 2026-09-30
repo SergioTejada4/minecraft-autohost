@@ -1,0 +1,57 @@
+name: Publish Linux daemon release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test daemon
+        run: go test ./...
+
+      - name: Check installer syntax
+        run: bash -n scripts/install.sh
+
+      - name: Build Linux binaries and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          build_daemon() {
+            local suffix="$1"
+            local goarch="$2"
+            local goarm="${3:-}"
+            if [[ -n "$goarm" ]]; then
+              GOOS=linux GOARCH="$goarch" GOARM="$goarm" CGO_ENABLED=0 \
+                go build -trimpath -ldflags='-s -w' -o "dist/autohost-daemon-linux-${suffix}" ./daemon
+            else
+              GOOS=linux GOARCH="$goarch" CGO_ENABLED=0 \
+                go build -trimpath -ldflags='-s -w' -o "dist/autohost-daemon-linux-${suffix}" ./daemon
+            fi
+            sha256sum "dist/autohost-daemon-linux-${suffix}" > "dist/autohost-daemon-linux-${suffix}.sha256"
+          }
+          build_daemon amd64 amd64
+          build_daemon arm64 arm64
+          build_daemon armv7 arm 7
+          cp deploy/autohost.service dist/autohost.service
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AutoHost · Administration</title>
+  <style>
+    :root{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;color:#e8eee8;background:#111613;--line:#35423a;--muted:#a8b5ab;--mint:#9be3bc;--amber:#ffc878;--panel:#19211c}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#121915,#101411 55%,#1c2118);min-height:100vh}header{padding:22px clamp(18px,4vw,58px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:24px}h1{margin:0;font-size:20px;letter-spacing:0}h1 span{color:var(--mint)}.brand small,.muted{color:var(--muted)}main{max-width:1200px;margin:auto;padding:26px clamp(16px,4vw,52px) 64px}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.status{display:flex;align-items:center;gap:9px}.dot{width:9px;height:9px;background:#89978d;border-radius:50%}.dot.live{background:var(--mint);box-shadow:0 0 12px #73d9a688}.layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}.panel{border:1px solid var(--line);background:#19211ce8;padding:18px;border-radius:6px;min-width:0}.panel h2{font-size:14px;text-transform:uppercase;color:var(--mint);margin:0 0 16px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.stat{border-top:1px solid var(--line);padding-top:10px;min-width:0}.stat b{display:block;font-size:22px;margin-top:6px}.stat .names{display:block;font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin-top:7px}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:12px;color:var(--muted)}input,textarea,select{background:#0f1511;color:#f2f4ee;border:1px solid #46544a;padding:10px;font:inherit;border-radius:3px;min-width:0}input:focus,textarea:focus,select:focus{outline:2px solid #9be3bc66;border-color:var(--mint)}textarea{min-height:90px;resize:vertical}button,.upload{font:inherit;color:#122019;background:var(--mint);border:0;border-radius:3px;padding:10px 13px;cursor:pointer;min-height:40px}button.secondary,.upload.secondary{color:#e8eee8;background:#28342c;border:1px solid #46544a}.tabs{display:flex;gap:8px;overflow:auto;margin-top:20px;border-bottom:1px solid var(--line)}.tab[aria-selected=true]{color:#122019;background:var(--mint)}.view{margin-top:18px}.wide{grid-column:1/-1}.scroll{max-height:300px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}td,th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:400}.message{min-height:18px;color:var(--amber);font-size:12px;margin-top:10px}.check{display:flex;gap:9px;align-items:center;margin:14px 0}.check input{accent-color:#9be3bc;width:17px;height:17px}.hidden{display:none!important}#restoreFile{display:none}@media(max-width:760px){header{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.wide{grid-column:auto}.stats{grid-template-columns:1fr 1fr}}
+  </style>
+  <style>
+    .restore-progress{display:grid;gap:7px;margin-top:14px}.restore-progress progress{width:min(100%,560px);height:14px;accent-color:var(--mint)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><h1><span>AutoHost</span> / Control</h1><small>Raspberry Pi · Minecraft 1.21.1</small></div>
+    <span class="muted">Available on this network</span>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="toolbar" style="justify-content:space-between">
+        <div class="status"><span id="dot" class="dot"></span><strong id="state">Checking daemon</strong></div>
+        <span id="host" class="muted">Host: --</span>
+      </div>
+      <div class="stats" style="margin-top:18px">
+        <div class="stat"><span class="muted">TCP connections</span><b id="players">--</b></div>
+        <div class="stat"><span class="muted">Players</span><b id="playerCount">--</b><span id="playerNames" class="muted names">No host connected</span></div>
+        <div class="stat"><span class="muted">World files</span><b id="files">--</b></div>
+        <div class="stat"><span class="muted">World size</span><b id="size">--</b></div>
+      </div>
+      <p id="message" class="message" role="status"></p>
+    </section>
+    <nav class="tabs" aria-label="Secciones del panel">
+      <button class="tab" data-view="server" aria-selected="true">Server</button>
+      <button class="tab secondary" data-view="world" aria-selected="false">World &amp; Backups</button>
+      <button class="tab secondary" data-view="activity" aria-selected="false">Activity</button>
+    </nav>
+    <section id="view-server" class="view">
+      <div class="layout">
+      <section class="panel">
+        <h2>Server Identity</h2>
+        <div class="field"><label for="motd">Server message</label><input id="motd" maxlength="256"></div>
+        <button id="saveSettings">Save settings</button>
+        <div class="field"><label for="iconFile">Server icon (PNG/JPEG, resized to 64×64)</label><input id="iconFile" type="file" accept="image/png,image/jpeg"><div class="toolbar"><img id="iconPreview" width="64" height="64" alt="Server icon" class="hidden"><button id="uploadIcon" class="secondary">Upload icon</button></div></div>
+        <p class="muted">The Pi's MOTD and icon remain visible while a host is active.</p>
+      </section>
+      <section class="panel">
+        <h2>Player Access</h2>
+        <label class="check"><input id="whitelist" type="checkbox"> Enable whitelist</label>
+        <div class="field"><label for="allowed">Allowed players, one per line</label><textarea id="allowed" spellcheck="false"></textarea></div>
+        <div class="field"><label for="admins">World admins, one per line</label><textarea id="admins" spellcheck="false" placeholder="Steve\nAlex"></textarea><small class="muted">Admins receive operator level 4 and can use world commands.</small></div>
+        <button id="saveAccess" class="secondary">Save access settings</button>
+        <p class="muted">The whitelist is enforced by the host's integrated server.</p>
+      </section>
+      </div>
+    </section>
+    <section id="view-world" class="view hidden">
+      <div class="layout">
+      <section class="panel">
+        <h2>World &amp; Backups</h2>
+        <p class="muted">Full copy of the world stored on the Raspberry Pi.</p>
+        <p class="muted">Backups: <strong id="backupUsage">--</strong></p>
+        <div class="actions"><button id="download">Download ZIP</button><button id="chooseRestore" class="secondary">Restore ZIP…</button><input id="restoreFile" type="file" accept=".zip,application/zip"></div>
+        <div id="restoreProgressBox" class="restore-progress hidden" role="status" aria-live="polite"><progress id="restoreProgress" max="100" value="0" aria-label="World restore progress"></progress><span id="restoreProgressText" class="muted"></span></div>
+        <div class="field"><label for="snapshots">Automatic restore points</label><select id="snapshots"><option value="">No snapshots yet</option></select></div>
+        <button id="restoreSnapshot" class="secondary">Restore selected snapshot</button>
+        <p id="worldMessage" class="message" role="status"></p>
+      </section>
+      </div>
+    </section>
+    <section id="view-activity" class="view hidden">
+      <div class="layout">
+      <section class="panel wide">
+        <div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Activity Log</h2><button id="refresh" class="secondary">Refresh</button></div>
+        <div class="scroll"><table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Details</th></tr></thead><tbody id="logs"><tr><td colspan="3" class="muted">Connect to load the history.</td></tr></tbody></table></div>
+      </section>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const message = (text) => { $('message').textContent = text; };
+    async function api(path, options = {}) {
+      const response = await fetch(path, options);
+      if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
+      return response;
+    }
+    function formatBytes(value) {
+      if (!value) return '0 B';
+      const units = ['B','KiB','MiB','GiB','TiB'];
+      const rank = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+      return `${(value / 1024 ** rank).toFixed(rank ? 1 : 0)} ${units[rank]}`;
+    }
+    async function refreshStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const status = await response.json();
+        $('state').textContent = status.hostActive ? 'Server online' : 'Idle';
+        $('dot').classList.toggle('live', status.hostActive);
+        $('host').textContent = `Host: ${status.hostActive ? (status.hostName || 'activo') : 'ninguno'}`;
+        $('players').textContent = status.players;
+        const names = status.playerNames || [];
+        $('playerCount').textContent = names.length;
+        $('playerNames').textContent = names.length ? names.join(', ') : 'No players';
+      } catch { $('state').textContent = 'Daemon unavailable'; }
+    }
+    async function refreshAdmin() {
+      const [settingsResponse, logsResponse, worldResponse, snapshotsResponse] = await Promise.all([
+        api('/api/admin/settings'), api('/api/admin/logs'), api('/api/admin/world/info'), api('/api/admin/snapshots')
+      ]);
+      const settings = await settingsResponse.json();
+      $('motd').value = settings.motd || '';
+      $('whitelist').checked = settings.whitelistEnabled;
+      $('allowed').value = (settings.allowedPlayers || []).join('\n');
+      $('admins').value = (settings.adminPlayers || []).join('\n');
+      const world = await worldResponse.json();
+      $('files').textContent = world.files;
+      $('size').textContent = formatBytes(world.bytes);
+      $('backupUsage').textContent = `${formatBytes(world.backupBytes)} / ${formatBytes(world.backupLimitBytes)} · ${world.snapshots}/${world.snapshotLimit} snapshots`;
+      const snapshots = await snapshotsResponse.json();
+      const snapshotSelect = $('snapshots');
+      snapshotSelect.replaceChildren();
+      if (!snapshots.length) snapshotSelect.add(new Option('No snapshots yet', ''));
+      for (const snapshot of snapshots) {
+        const label = `${new Date(snapshot.createdAt).toLocaleString()} · ${formatBytes(snapshot.bytes)}`;
+        snapshotSelect.add(new Option(label, snapshot.id));
+      }
+      const logs = await logsResponse.json();
+      $('logs').replaceChildren(...logs.slice().reverse().map((entry) => {
+        const row = document.createElement('tr');
+        for (const value of [new Date(entry.time).toLocaleString(), entry.action, entry.detail]) {
+          const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
+        }
+        return row;
+      }));
+      try {
+        const iconResponse = await api('/api/admin/server-icon');
+        $('iconPreview').src = URL.createObjectURL(await iconResponse.blob());
+        $('iconPreview').classList.remove('hidden');
+      } catch { $('iconPreview').classList.add('hidden'); }
+      message('Data refreshed.');
+    }
+    $('refresh').addEventListener('click', () => refreshAdmin().catch((error) => message(error.message)));
+    async function saveSettings() {
+      try {
+        await api('/api/admin/settings', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({motd:$('motd').value,whitelistEnabled:$('whitelist').checked,allowedPlayers:$('allowed').value.split('\n').map((name)=>name.trim()).filter(Boolean),adminPlayers:$('admins').value.split('\n').map((name)=>name.trim()).filter(Boolean)})});
+        message('Settings saved on the Pi.');
+      } catch (error) { message(error.message); }
+    }
+    $('saveSettings').addEventListener('click', saveSettings);
+    $('saveAccess').addEventListener('click', saveSettings);
+    $('uploadIcon').addEventListener('click', async () => {
+      const file = $('iconFile').files[0];
+      if (!file) { message('Choose a PNG or JPEG file.'); return; }
+      try {
+        await api('/api/admin/server-icon', {method:'POST', headers:{'Content-Type':file.type}, body:file});
+        const iconResponse = await api('/api/admin/server-icon');
+        $('iconPreview').src = URL.createObjectURL(await iconResponse.blob());
+        $('iconPreview').classList.remove('hidden');
+        message('Icon saved. It will appear in Minecraft server status even while a host is active.');
+      } catch (error) { message(error.message); }
+    });
+    $('download').addEventListener('click', async () => {
+      try {
+        const response = await api('/api/admin/world.zip');
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a'); link.href = url; link.download = 'autohost-world.zip'; link.click(); URL.revokeObjectURL(url);
+      } catch (error) { $('worldMessage').textContent = error.message; }
+    });
+    $('restoreSnapshot').addEventListener('click', async () => {
+      const id = $('snapshots').value;
+      if (!id || !confirm('Restore this snapshot and replace the current world?')) return;
+      try { await api(`/api/admin/snapshots/${encodeURIComponent(id)}/restore`, {method:'POST'}); $('worldMessage').textContent = 'Snapshot restored.'; await refreshAdmin(); }
+      catch (error) { $('worldMessage').textContent = error.message; }
+    });
+    $('chooseRestore').addEventListener('click', () => $('restoreFile').click());
+    function restoreZipWithProgress(file) {
+      return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open('POST', '/api/admin/world/restore');
+        request.setRequestHeader('Content-Type', 'application/zip');
+        request.upload.addEventListener('progress', (event) => {
+          if (!event.lengthComputable) return;
+          const percent = Math.round(event.loaded / event.total * 100);
+          $('restoreProgress').value = percent;
+          $('restoreProgressText').textContent = `Uploading ZIP: ${percent}%`;
+        });
+        request.upload.addEventListener('load', () => {
+          $('restoreProgress').removeAttribute('value');
+          $('restoreProgressText').textContent = 'ZIP received. The Pi is validating and restoring the world…';
+        });
+        request.addEventListener('load', () => {
+          if (request.status === 204) {
+            resolve();
+            return;
+          }
+          reject(new Error(request.responseText.trim() || `HTTP ${request.status}`));
+        });
+        request.addEventListener('error', () => reject(new Error('Error de red al enviar el ZIP.')));
+        request.send(file);
+      });
+    }
+    $('restoreFile').addEventListener('change', async (event) => {
+      const file = event.target.files[0]; if (!file) return;
+      if (!confirm(`Restore ${file.name} and replace the current world?`)) return;
+      $('restoreProgressBox').classList.remove('hidden');
+      $('restoreProgress').value = 0;
+      $('restoreProgressText').textContent = 'Preparing upload…';
+      $('worldMessage').textContent = '';
+      try {
+        await restoreZipWithProgress(file);
+        $('restoreProgress').value = 100;
+        $('restoreProgressText').textContent = 'Restore complete.';
+        $('worldMessage').textContent = 'The ZIP was restored successfully.';
+        try { await refreshAdmin(); } catch (error) { $('worldMessage').textContent += ` The panel could not be refreshed: ${error.message}`; }
+      } catch (error) {
+        $('restoreProgress').value = 0;
+        $('restoreProgressText').textContent = 'Restore did not complete.';
+        $('worldMessage').textContent = error.message;
+      } finally {
+        event.target.value = '';
+      }
+    });
+    document.querySelectorAll('[data-view]').forEach((tab) => tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-view]').forEach((item) => item.setAttribute('aria-selected', String(item === tab)));
+      document.querySelectorAll('.view').forEach((view) => view.classList.toggle('hidden', view.id !== `view-${tab.dataset.view}`));
+    }));
+    refreshStatus(); setInterval(refreshStatus, 5000);
+    refreshAdmin().catch((error) => message(error.message));
+  </script>
+</body>
+</html>

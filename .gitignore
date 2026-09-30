@@ -1,0 +1,9 @@
+.gradle/
+build/
+runs/
+*.class
+*.jar
+autohost-daemon
+autohost-daemon.exe
+autohost-daemon-linux-*
+dist/
