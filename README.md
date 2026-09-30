@@ -12,7 +12,7 @@ The Raspberry Pi runs a small Go daemon for connection routing, world storage, a
 The one-line installer supports Linux systems running **systemd** on `amd64`, `arm64`, and ARMv7. It downloads the latest daemon release, verifies its SHA-256 checksum, installs and enables the service, and leaves existing world data untouched. It is highly recommended setting a static IP for the Linux system.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sergiotejada4/minecraft-autohost/main/scripts/install.sh \
+curl -fsSL https://raw.githubusercontent.com/SergioTejada4/minecraft-autohost/main/scripts/install.sh \
 	| sudo bash -s -- sergiotejada4/minecraft-autohost
 ```
 
