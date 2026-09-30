@@ -1,29 +1,19 @@
-﻿go build -o autohost-daemon ./daemon
-gradle compileJava
-gradle build
-go build -trimpath -ldflags '-s -w' -o autohost-daemon-linux-armv7 ./daemon
-# AutoHost P2P
+﻿# AutoHost P2P
 
-Play a Minecraft 1.21.1 world through a Raspberry Pi without keeping a dedicated server running. The first player to join becomes the host; other players join through the same Multiplayer server entry.
+Play a Minecraft 1.21.1 NeoForge world through a Raspberry Pi or linux system without keeping a dedicated server running. The mode is absolutely mod-compatible. The first player to join becomes the host; other players join through the same Multiplayer server entry. The project have been developed to work on Raspberry Pi but it should work in any other linux aswell.
 
 The Raspberry Pi runs a small Go daemon for connection routing, world storage, and the web panel. Each player runs Minecraft with the NeoForge client mod. The Pi does not run Minecraft or Java.
 
 - Minecraft address: `PI_IP_ADDRESS:25565`
 - Administration panel: `http://PI_IP_ADDRESS:8080`
-- System requirements and detailed Pi instructions: [Raspberry Pi installation guide](INSTALACION-PI.md)
-- Full feature list and current limitations: [FEATURES.md](FEATURES.md)
 
 ## Install on Linux
 
-The one-line installer supports Linux systems running **systemd** on `amd64`, `arm64`, and ARMv7, including Raspberry Pi OS on a Pi 2 Rev 1.1. It downloads the latest daemon release, verifies its SHA-256 checksum, installs and enables the service, and leaves existing world data untouched.
-
-Create a **public GitHub repository** first, then replace `OWNER/REPOSITORY` below with its account and repository name:
-
-The installer requires a published GitHub Release containing the daemon binaries. Follow [Publish and Sync with GitHub](#publish-and-sync-with-github) to create the repository and its first tagged release before running the install command.
+The one-line installer supports Linux systems running **systemd** on `amd64`, `arm64`, and ARMv7. It downloads the latest daemon release, verifies its SHA-256 checksum, installs and enables the service, and leaves existing world data untouched. It is highly recommended setting a static IP for the Linux system.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/OWNER/REPOSITORY/main/scripts/install.sh \
-	| sudo bash -s -- OWNER/REPOSITORY
+	| sudo bash -s -- sergiotejada4/minecraft-autohost
 ```
 
 The service starts immediately and launches automatically after reboot. Check it with:
@@ -44,83 +34,55 @@ The updater verifies the download, keeps a copy of the previous binary for rollb
 ## Install the Minecraft Mod
 
 1. Install Java 21 and NeoForge for Minecraft 1.21.1.
-2. Download `autohost-client-0.1.0.jar` from the project's GitHub Release.
-3. Put the JAR in the `mods` folder of each player's Minecraft instance.
+2. Download `autohost-client-x.x.x.jar` from the project's GitHub Release.
+3. Put the JAR in the `mods` folder of each player's Minecraft instance. All the players MUST have the same modpack in order to be able to JOIN and to PRESERVE the worlds mod-related blocks. Deleting mods and joining as host will cause the dissapearance of mod-related blocks, be careful if this is not the intended action. Apart from that, adding or removing mods is totally fine.
 4. Add `PI_IP_ADDRESS:25565` to Multiplayer as a normal server and press **Join**.
 
-The JAR is attached to each GitHub Release manually. The automated release workflow publishes only the Linux daemon and its systemd unit.
+The JAR is attached to each GitHub Release manually, so each time you update the .jar, you must update the server side and viceversa. The automated release workflow publishes only the Linux daemon and its systemd unit.
 
 ## Internet Access
 
-For LAN play, no router port forwarding is required. For Internet play, forward TCP `25565` to the Pi and make the API reachable. The daemon listens on LAN port `8080`; the mod tries both API ports `8080` and `4000`, so either mapping works:
+For LAN play, no router port forwarding is required. For Internet play, forward TCP `25565` to the Pi and make the API reachable. The daemon listens on LAN port `8080` and public `4000`.
 
-- Public TCP `8080` → Pi TCP `8080`
+- Public TCP `25565` → Pi TCP `25565`
 - Public TCP `4000` → Pi TCP `8080`
 
 A reachable public IPv4 address is required for port forwarding. If the Pi's ISP uses CGNAT, use a VPN or a publicly reachable VPS instead. The administration API has no authentication; do not expose it to untrusted networks.
 
 ## How It Works
 
-- The first player claims the host role and downloads the current world from the Pi, or creates a new `AutoHost` world if none exists.
+- The first player claims the host role and downloads the current world from the Pi, or creates a new world if none exists.
 - The host opens the world locally; the mod publishes it on LAN and maintains an outbound reverse tunnel to the Pi.
 - Later players connect to the same Pi address. The Pi routes their Minecraft traffic through the tunnel to the host.
 - The host saves and syncs changed world files every five minutes and when the session closes.
 - The Pi retains up to four snapshots and caps their unique, deduplicated backup data at 4 GiB. The live world is stored separately.
 
-## Publish and Sync with GitHub
+## Server Customization
 
-The project folder is not linked to GitHub until you create a repository and set its remote. Git does not upload every file save automatically: commit and push changes to sync them. The release workflow runs automatically when you push a version tag.
+ Open the web panel at `http://PI_IP_ADDRESS:8080` from the local network. If accessing it remotely through the example router mapping, open `http://PUBLIC_IP:4000`. The Pi daemon listens on `8080` in both cases; the router translates public `4000` to Pi `8080`.
 
-On the Pi, install Git, create a dedicated SSH key, and add its **public** key to your GitHub account under **Settings → SSH and GPG keys**. Never share the private key:
+ ### Server
 
-```sh
-sudo apt update && sudo apt install -y git
-ssh-keygen -t ed25519 -C "autohost-pi"
-cat ~/.ssh/id_ed25519.pub
-ssh -T git@github.com
-git config --global user.name "YOUR NAME"
-git config --global user.email "YOUR_EMAIL"
-```
+ - **Server message (MOTD):** set the text shown in the Minecraft Multiplayer list. The maximum length is 256 characters. The Pi keeps serving its configured MOTD while a host is active.
+ - **Server icon:** upload a PNG or JPEG up to 8 MiB and 2048×2048 pixels. The Pi converts it to the 64×64 PNG required by Minecraft and uses it in server status responses.
 
-Create an empty public repository on GitHub (do not initialize it with a README), then connect this existing project folder on the Pi:
+ ### Player Access
 
-```sh
-cd /path/to/this/project
-git init -b main
-git add .
-git commit -m "Initial AutoHost release"
-git remote add origin git@github.com:sergiotejada4/minecraft-autohost.git
-git push -u origin main
-```
+ - **Whitelist:** enable it and enter Minecraft usernames, one per line. The host's integrated server enforces it when players join.
+ - **World admins:** enter usernames, one per line. Admin names must be 1–16 characters using letters, digits, or underscores. They receive Minecraft operator level 4 in the hosted world.
+ - Settings are stored on the Pi. The host loads them while preparing the world and refreshes them during the session.
 
-For later source changes, commit and push them. Git does not upload uncommitted file edits automatically; the `git push` is the synchronization step:
+ ### World & Backups
 
-```sh
-git add .
-git commit -m "Describe the change"
-git push
-```
+ - **Download ZIP:** downloads the current Pi world when no host is active.
+ - **Restore ZIP:** uploads and validates an archive, then replaces the current Pi world. The panel shows upload percentage and reports while the Pi validates/restores it. The archive must contain a non-empty `level.dat` at its root; restoration is refused while a host is active.
+ - **Snapshots:** select and restore an automatic restore point when no host is active. The Pi retains at most four snapshots and 4 GiB of unique deduplicated backup blobs. This quota does not include the live world.
 
-To publish daemon binaries, push a version tag. GitHub Actions tests the Go daemon, builds Linux binaries for `amd64`, `arm64`, and ARMv7, creates SHA-256 files, and publishes a GitHub Release:
+ ### Activity
 
-```sh
-git tag v0.1.0
-git push origin v0.1.0
-```
+ The activity tab lists player joins and leaves, host tunnel connections/disconnections, and world backup/restore events. Press **Refresh** to load the latest entries.
 
-Open that release on GitHub and manually attach `autohost-client-0.1.0.jar`. The installer always downloads the latest non-draft release. Use a new version tag for each release.
-
-## Build from Source
-
-Requirements: Go 1.22 or later, JDK 21, and Gradle 8.8 or later.
-
-```sh
-go test ./...
-go build -o autohost-daemon ./daemon
-
-```
-
-The client JAR is generated at `build/libs/autohost-client-0.1.0.jar`. The first Gradle build may take several minutes while Minecraft sources and mappings are prepared.
+ The panel and API currently have no authentication. Anyone who can reach the API may change these settings or world data, so expose the panel only on a trusted network or through a VPN.
 
 ## Data and Backups
 

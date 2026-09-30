@@ -153,3 +153,58 @@ The Pi keeps at most **4 snapshots** and limits their backup blobs to **4 GiB**;
 - The panel does not open: make sure the Pi is powered on and use `http://PI_IP_ADDRESS:8080`.
 - The host is not assigned: confirm all clients use the same Pi IPv4 address and that the API is reachable on public port 8080 or 4000.
 - The Pi is behind CGNAT: request a public IPv4 address or use a VPS; the host PC's NAT does not affect its outbound tunnel.
+
+## Publish and Sync with GitHub
+
+The project folder is not linked to GitHub until you create a repository and set its remote. Git does not upload every file save automatically: commit and push changes to sync them. The release workflow runs automatically when you push a version tag.
+
+On the Pi, install Git, create a dedicated SSH key, and add its **public** key to your GitHub account under **Settings → SSH and GPG keys**. Never share the private key:
+
+```sh
+sudo apt update && sudo apt install -y git
+ssh-keygen -t ed25519 -C "autohost-pi"
+cat ~/.ssh/id_ed25519.pub
+ssh -T git@github.com
+git config --global user.name "YOUR NAME"
+git config --global user.email "YOUR_EMAIL"
+```
+
+Create an empty public repository on GitHub (do not initialize it with a README), then connect this existing project folder on the Pi:
+
+```sh
+cd /path/to/this/project
+git init -b main
+git add .
+git commit -m "Initial AutoHost release"
+git remote add origin git@github.com:sergiotejada4/minecraft-autohost.git
+git push -u origin main
+```
+
+For later source changes, commit and push them. Git does not upload uncommitted file edits automatically; the `git push` is the synchronization step:
+
+```sh
+git add .
+git commit -m "Describe the change"
+git push
+```
+
+To publish daemon binaries, push a version tag. GitHub Actions tests the Go daemon, builds Linux binaries for `amd64`, `arm64`, and ARMv7, creates SHA-256 files, and publishes a GitHub Release:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Open that release on GitHub and manually attach `autohost-client-0.1.0.jar`. The installer always downloads the latest non-draft release. Use a new version tag for each release.
+
+## Build from Source
+
+Requirements: Go 1.22 or later, JDK 21, and Gradle 8.8 or later.
+
+```sh
+go test ./...
+go build -o autohost-daemon ./daemon
+
+```
+
+The client JAR is generated at `build/libs/autohost-client-0.1.0.jar`. The first Gradle build may take several minutes while Minecraft sources and mappings are prepared.
