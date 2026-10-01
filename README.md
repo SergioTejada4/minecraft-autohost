@@ -47,7 +47,7 @@ For LAN play, no router port forwarding is required. For Internet play, forward 
 - Public TCP `25565` → Pi TCP `25565`
 - Public TCP `4000` → Pi TCP `8080`
 
-A reachable public IPv4 address is required for port forwarding. You can get your public IP adress with:
+A reachable public IPv4 address is required for port forwarding. You can find your public IP adress executing in Linux:
 
 ```sh
 curl -s ifconfig.me
