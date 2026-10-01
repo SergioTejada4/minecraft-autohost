@@ -34,9 +34,11 @@ The updater verifies the download, keeps a copy of the previous binary for rollb
 ## Install the Minecraft Mod
 
 1. Install Java 21 and NeoForge for Minecraft 1.21.1.
-2. Download `autohost-client-x.x.x.jar` from the project's GitHub Release.
-3. Put the JAR in the `mods` folder of each player's Minecraft instance. All the players MUST have the same modpack in order to be able to JOIN and to PRESERVE the worlds mod-related blocks. Deleting mods and joining as host will cause the dissapearance of mod-related blocks, be careful if this is not the intended action. Apart from that, adding or removing mods is totally fine.
-4. Add `PI_IP_ADDRESS:25565` to Multiplayer as a normal server and press **Join**.
+2. Download `autohost-client-x.x.x.jar` from the project's GitHub Release or in these links (also available in their interfaces):
+   CurseForge: https://www.curseforge.com/minecraft/mc-mods/autohost-p2p/preview
+   Modrinth: https://modrinth.com/mod/autohost-p2p
+4. Put the JAR in the `mods` folder of each player's Minecraft instance. All the players MUST have the same modpack in order to be able to JOIN and to PRESERVE the worlds mod-related blocks. Deleting mods and joining as host will cause the dissapearance of mod-related blocks, be careful if this is not the intended action. Apart from that, adding or removing mods is totally fine.
+5. Add `PI_IP_ADDRESS:25565` to Multiplayer as a normal server and press **Join**.
 
 The JAR is attached to each GitHub Release manually, so each time you update the .jar, you must update the server side and viceversa. The automated release workflow publishes only the Linux daemon and its systemd unit.
 
