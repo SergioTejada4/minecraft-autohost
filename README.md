@@ -47,7 +47,11 @@ For LAN play, no router port forwarding is required. For Internet play, forward 
 - Public TCP `25565` → Pi TCP `25565`
 - Public TCP `4000` → Pi TCP `8080`
 
-A reachable public IPv4 address is required for port forwarding. If the Pi's ISP uses CGNAT, use a VPN or a publicly reachable VPS instead. The administration API has no authentication; do not expose it to untrusted networks.
+A reachable public IPv4 address is required for port forwarding. You can get your public IP adress with:
+
+```sh
+curl -s ifconfig.me
+```
 
 ## How It Works
 
